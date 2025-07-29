@@ -1,0 +1,36 @@
+[project]
+name = "whodis"
+version = "0.1.0"
+description = "A Redis-inspired server"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "mypy==1.16.1",
+    "pytest==8.4.1",
+    "ruff==0.12.2",
+]
+
+[tool.mypy]
+python_version = "3.14"
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D",        # docstrings
+    "TD003",    # todos issue links 
+    "FIX002",   # todos resolve
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/test_*.py" = ["S101"] # disable assert warning for test files
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

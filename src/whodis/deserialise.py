@@ -4,7 +4,25 @@ CRLF = "\r\n"
 class InvalidMessageError(ValueError):
     pass
 
-def parse_bulk_string(msg: str) -> str:
+def deserialise(msg: str) -> str | int:
+    if not msg.endswith(CRLF):
+        error = "Message could not be parsed: missing CRLF terminator"
+        raise InvalidMessageError(error)
+    return _parse(msg)
+
+def _parse(msg: str) -> str | int:
+    match msg[0]:
+        case "$":
+            return _parse_bulk_string(msg)
+        case "+":
+            return _parse_simple_string(msg)
+        case ":":
+            return _parse_integer(msg)
+        case _:
+            error = "Message could not be parsed: unsupported data type"
+            raise InvalidMessageError(error)
+
+def _parse_bulk_string(msg: str) -> str:
     if not msg.startswith("$") or not msg.endswith(CRLF):
         error = "Message could not be parsed as a bulk string"
         raise InvalidMessageError(error)
@@ -34,7 +52,7 @@ def parse_bulk_string(msg: str) -> str:
 
     return msg[content_start:content_end]
 
-def parse_simple_string(msg: str) -> str:
+def _parse_simple_string(msg: str) -> str:
     if not msg.startswith("+") or not msg.endswith(CRLF):
         error = "Message could not be parsed as a simple string"
         raise InvalidMessageError(error)
@@ -50,9 +68,9 @@ def parse_simple_string(msg: str) -> str:
 
     return extracted
 
-def parse_integer(msg: str) -> int:
+def _parse_integer(msg: str) -> int:
     if not msg.startswith(":") or not msg.endswith(CRLF):
-        error = "Message coudld not be parsed as an integer"
+        error = "Message could not be parsed as an integer"
         raise InvalidMessageError(error)
 
     extracted = msg.removeprefix(":").removesuffix(CRLF)
@@ -63,23 +81,5 @@ def parse_integer(msg: str) -> int:
     try:
         return int(extracted)
     except ValueError as e:
-        error = "Could not parse integer"
+        error = "Could not parse: not an integer"
         raise InvalidMessageError(error) from e
-
-def parse(msg: str) -> str | int:
-    match msg[0]:
-        case "$":
-            return parse_bulk_string(msg)
-        case "+":
-            return parse_simple_string(msg)
-        case ":":
-            return parse_integer(msg)
-        case _:
-            error = "Message could not be parsed: unsupported data type"
-            raise InvalidMessageError(error)
-
-def deserialise(msg: str) -> str | int:
-    if not msg.endswith(CRLF):
-        error = "Message cannot be parsed: missing CRLF terminator"
-        raise InvalidMessageError(error)
-    return parse(msg)

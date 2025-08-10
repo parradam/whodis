@@ -14,14 +14,14 @@ class ParseResult:
     bytes_consumed: int
 
 
-def deserialise(msg: str) -> ParseResult | str | list[int]:
+def deserialise(msg: str) -> ParseResult | list[int]:
     if not msg.endswith(CRLF):
         error = "Message could not be parsed: missing CRLF terminator"
         raise InvalidMessageError(error)
     return _parse(msg)
 
 
-def _parse(msg: str) -> ParseResult | str | list[int]:
+def _parse(msg: str) -> ParseResult | list[int]:
     match msg[0]:
         case "$":
             return _parse_bulk_string(msg)
@@ -34,7 +34,7 @@ def _parse(msg: str) -> ParseResult | str | list[int]:
             raise InvalidMessageError(error)
 
 
-def _parse_bulk_string(msg: str) -> str:
+def _parse_bulk_string(msg: str) -> ParseResult:
     if not msg.startswith("$") or not msg.endswith(CRLF):
         error = "Message could not be parsed as a bulk string"
         raise InvalidMessageError(error)
@@ -51,18 +51,19 @@ def _parse_bulk_string(msg: str) -> str:
         error = "Content length is negative"
         raise InvalidMessageError(error)
 
-    content_start = prefix_end + len(CRLF)
-    content_end = content_start + num_chars
+    start = prefix_end + len(CRLF)
+    end = start + num_chars
 
-    if len(msg) != content_end + len(CRLF):
+    bytes_consumed = end + len(CRLF)
+    if len(msg) != bytes_consumed:
         error = "Content length does not match number of bytes"
         raise InvalidMessageError(error)
 
-    if CRLF in msg[content_start:content_end]:
-        error = "Content contains newline characters"
-        raise InvalidMessageError(error)
-
-    return msg[content_start:content_end]
+    value = msg[start:end]
+    return ParseResult(
+        data=value,
+        bytes_consumed=bytes_consumed,
+    )
 
 
 def _parse_simple_string(msg: str) -> ParseResult:

@@ -20,8 +20,9 @@ def test_invalid_protocol_messages(sent_message: str) -> None:
 @pytest.mark.parametrize(
     ("sent_message", "expected_message"),
     [
-        pytest.param("$10\r\nbulkstring\r\n", "bulkstring", id="bulk_content"),
-        pytest.param("$0\r\n\r\n", "", id="bulk_empty"),
+        pytest.param("$0\r\n\r\n", ParseResult("", 6), id="bulk_empty"),
+        pytest.param("$10\r\nbulkstring\r\n", ParseResult("bulkstring", 17), id="bulk_content"),
+        pytest.param("$12\r\nbulk\r\nstring\r\n", ParseResult("bulk\r\nstring", 19), id="bulk_embedded_crlf"),
     ],
 )
 def test_valid_bulk_strings(sent_message: str, expected_message: str) -> None:
@@ -32,7 +33,6 @@ def test_valid_bulk_strings(sent_message: str, expected_message: str) -> None:
 @pytest.mark.parametrize(
     "sent_message",
     [
-        pytest.param("$12\r\nbulk\r\nstring\r\n", id="bulk_embedded_crlf"),
         pytest.param("$10\r\none\r\ntwo\r\n", id="bulk_multiline_body"),
         pytest.param("$9\r\nbulkstring\r\n", id="bulk_incorrect_length"),
         pytest.param("$0\r\na\r\n", id="bulk_zero_length_with_content"),

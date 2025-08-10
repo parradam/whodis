@@ -1,6 +1,6 @@
 import pytest
 
-from src.whodis.deserialise import InvalidMessageError, deserialise
+from src.whodis.deserialise import InvalidMessageError, ParseResult, deserialise
 
 
 @pytest.mark.parametrize(
@@ -73,15 +73,15 @@ def test_invalid_simple_strings(sent_message: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("sent_message", "expected_message"),
+    ("sent_message", "expected_result"),
     [
-        pytest.param(":123\r\n", 123, id="integer_content"),
-        pytest.param(f":{2**63!s}\r\n", 2**63, id="integer_large"),
+        pytest.param(":123\r\n", ParseResult(123, 6), id="integer_content"),
+        pytest.param(f":{2**63!s}\r\n", ParseResult(2**63, len(str(2**63))+3), id="integer_large"),
     ],
 )
-def test_valid_integers(sent_message: str, expected_message: int) -> None:
-    deserialised_message = deserialise(sent_message)
-    assert deserialised_message == expected_message
+def test_valid_integers(sent_message: str, expected_result: ParseResult) -> None:
+    parse_result = deserialise(sent_message)
+    assert parse_result == expected_result
 
 
 @pytest.mark.parametrize(

@@ -48,11 +48,11 @@ def test_invalid_bulk_strings(sent_message: str) -> None:
 @pytest.mark.parametrize(
     ("sent_message", "expected_message"),
     [
-        pytest.param("+hello world\r\n", "hello world", id="simple_content"),
-        pytest.param("+hello world \r\n", "hello world ", id="simple_trailing_space"),
-        pytest.param("+ hello world\r\n", " hello world", id="simple_leading_space"),
-        pytest.param("+ \r\n", " ", id="simple_one_space"),
-        pytest.param("+   \r\n", "   ", id="simple_three_spaces"),
+        pytest.param("+hello world\r\n", ParseResult("hello world", 14), id="simple_content"),
+        pytest.param("+hello world \r\n", ParseResult("hello world ", 15), id="simple_trailing_space"),
+        pytest.param("+ hello world\r\n", ParseResult(" hello world", 15), id="simple_leading_space"),
+        pytest.param("+ \r\n", ParseResult(" ", 4), id="simple_one_space"),
+        pytest.param("+   \r\n", ParseResult("   ", 6), id="simple_three_spaces"),
     ],
 )
 def test_valid_simple_strings(sent_message: str, expected_message: str) -> None:

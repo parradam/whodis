@@ -1,16 +1,27 @@
+from dataclasses import dataclass
+
 # Defines carriage return/line feed, used as a terminator and a delimiter
 CRLF = "\r\n"
+
 
 class InvalidMessageError(ValueError):
     pass
 
-def deserialise(msg: str) -> str | int:
+
+@dataclass(frozen=True)
+class ParseResult:
+    data: int | str
+    bytes_consumed: int
+
+
+def deserialise(msg: str) -> ParseResult | list[int]:
     if not msg.endswith(CRLF):
         error = "Message could not be parsed: missing CRLF terminator"
         raise InvalidMessageError(error)
     return _parse(msg)
 
-def _parse(msg: str) -> str | int:
+
+def _parse(msg: str) -> ParseResult | list[int]:
     match msg[0]:
         case "$":
             return _parse_bulk_string(msg)
@@ -22,7 +33,8 @@ def _parse(msg: str) -> str | int:
             error = "Message could not be parsed: unsupported data type"
             raise InvalidMessageError(error)
 
-def _parse_bulk_string(msg: str) -> str:
+
+def _parse_bulk_string(msg: str) -> ParseResult:
     if not msg.startswith("$") or not msg.endswith(CRLF):
         error = "Message could not be parsed as a bulk string"
         raise InvalidMessageError(error)
@@ -39,47 +51,64 @@ def _parse_bulk_string(msg: str) -> str:
         error = "Content length is negative"
         raise InvalidMessageError(error)
 
-    content_start = prefix_end + len(CRLF)
-    content_end = content_start + num_chars
+    start = prefix_end + len(CRLF)
+    end = start + num_chars
 
-    if len(msg) != content_end + len(CRLF):
+    bytes_consumed = end + len(CRLF)
+    if len(msg) != bytes_consumed:
         error = "Content length does not match number of bytes"
         raise InvalidMessageError(error)
 
-    if CRLF in msg[content_start:content_end]:
-        error = "Content contains newline characters"
-        raise InvalidMessageError(error)
+    value = msg[start:end]
+    return ParseResult(
+        data=value,
+        bytes_consumed=bytes_consumed,
+    )
 
-    return msg[content_start:content_end]
 
-def _parse_simple_string(msg: str) -> str:
+def _parse_simple_string(msg: str) -> ParseResult:
     if not msg.startswith("+") or not msg.endswith(CRLF):
         error = "Message could not be parsed as a simple string"
         raise InvalidMessageError(error)
 
-    extracted = msg.removeprefix("+").removesuffix(CRLF)
-    if len(extracted) == 0:
+    end = msg.index(CRLF)
+    if end == 1:
         error = "Content length is zero"
         raise InvalidMessageError(error)
 
-    if CRLF in extracted:
+    bytes_consumed = end + len(CRLF)
+    if bytes_consumed != len(msg):
         error = "Content contains newline characters"
         raise InvalidMessageError(error)
 
-    return extracted
+    value = msg[1:end]
+    return ParseResult(
+        data=value,
+        bytes_consumed=bytes_consumed,
+    )
 
-def _parse_integer(msg: str) -> int:
+
+def _parse_integer(msg: str) -> ParseResult:
     if not msg.startswith(":") or not msg.endswith(CRLF):
         error = "Message could not be parsed as an integer"
         raise InvalidMessageError(error)
 
-    extracted = msg.removeprefix(":").removesuffix(CRLF)
-    if len(extracted) == 0:
+    end = msg.index(CRLF)
+    if end == 1:
         error = "Content length is zero"
         raise InvalidMessageError(error)
 
+    bytes_consumed = end + len(CRLF)
+    if bytes_consumed != len(msg):
+        error = "Content contains newline characters"
+        raise InvalidMessageError(error)
+
     try:
-        return int(extracted)
+        value = int(msg[1:end])
+        return ParseResult(
+            data=value,
+            bytes_consumed=bytes_consumed,
+        )
     except ValueError as e:
         error = "Could not parse: not an integer"
         raise InvalidMessageError(error) from e

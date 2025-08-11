@@ -1,6 +1,6 @@
 import pytest
 
-from src.whodis.deserialise import InvalidMessageError, deserialise
+from src.whodis.deserialise import InvalidMessageError, ParseResult, deserialise
 
 
 @pytest.mark.parametrize(
@@ -20,8 +20,9 @@ def test_invalid_protocol_messages(sent_message: str) -> None:
 @pytest.mark.parametrize(
     ("sent_message", "expected_message"),
     [
-        pytest.param("$10\r\nbulkstring\r\n", "bulkstring", id="bulk_content"),
-        pytest.param("$0\r\n\r\n", "", id="bulk_empty"),
+        pytest.param("$0\r\n\r\n", ParseResult("", 6), id="bulk_empty"),
+        pytest.param("$10\r\nbulkstring\r\n", ParseResult("bulkstring", 17), id="bulk_content"),
+        pytest.param("$12\r\nbulk\r\nstring\r\n", ParseResult("bulk\r\nstring", 19), id="bulk_embedded_crlf"),
     ],
 )
 def test_valid_bulk_strings(sent_message: str, expected_message: str) -> None:
@@ -32,7 +33,6 @@ def test_valid_bulk_strings(sent_message: str, expected_message: str) -> None:
 @pytest.mark.parametrize(
     "sent_message",
     [
-        pytest.param("$12\r\nbulk\r\nstring\r\n", id="bulk_embedded_crlf"),
         pytest.param("$10\r\none\r\ntwo\r\n", id="bulk_multiline_body"),
         pytest.param("$9\r\nbulkstring\r\n", id="bulk_incorrect_length"),
         pytest.param("$0\r\na\r\n", id="bulk_zero_length_with_content"),
@@ -48,11 +48,11 @@ def test_invalid_bulk_strings(sent_message: str) -> None:
 @pytest.mark.parametrize(
     ("sent_message", "expected_message"),
     [
-        pytest.param("+hello world\r\n", "hello world", id="simple_content"),
-        pytest.param("+hello world \r\n", "hello world ", id="simple_trailing_space"),
-        pytest.param("+ hello world\r\n", " hello world", id="simple_leading_space"),
-        pytest.param("+ \r\n", " ", id="simple_one_space"),
-        pytest.param("+   \r\n", "   ", id="simple_three_spaces"),
+        pytest.param("+hello world\r\n", ParseResult("hello world", 14), id="simple_content"),
+        pytest.param("+hello world \r\n", ParseResult("hello world ", 15), id="simple_trailing_space"),
+        pytest.param("+ hello world\r\n", ParseResult(" hello world", 15), id="simple_leading_space"),
+        pytest.param("+ \r\n", ParseResult(" ", 4), id="simple_one_space"),
+        pytest.param("+   \r\n", ParseResult("   ", 6), id="simple_three_spaces"),
     ],
 )
 def test_valid_simple_strings(sent_message: str, expected_message: str) -> None:
@@ -73,15 +73,15 @@ def test_invalid_simple_strings(sent_message: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("sent_message", "expected_message"),
+    ("sent_message", "expected_result"),
     [
-        pytest.param(":123\r\n", 123, id="integer_content"),
-        pytest.param(f":{2**63!s}\r\n", 2**63, id="integer_large"),
+        pytest.param(":123\r\n", ParseResult(123, 6), id="integer_content"),
+        pytest.param(f":{2**63!s}\r\n", ParseResult(2**63, len(str(2**63))+3), id="integer_large"),
     ],
 )
-def test_valid_integers(sent_message: str, expected_message: int) -> None:
-    deserialised_message = deserialise(sent_message)
-    assert deserialised_message == expected_message
+def test_valid_integers(sent_message: str, expected_result: ParseResult) -> None:
+    parse_result = deserialise(sent_message)
+    assert parse_result == expected_result
 
 
 @pytest.mark.parametrize(

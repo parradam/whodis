@@ -96,3 +96,43 @@ def test_valid_integers(sent_message: str, expected_result: ParseResult) -> None
 def test_invalid_integers(sent_message: str) -> None:
     with pytest.raises(InvalidMessageError):
         deserialise(sent_message)
+
+
+@pytest.mark.parametrize(
+    ("sent_message", "expected_result"),
+    [
+        pytest.param("*1\r\n+hi\r\n", ParseResult(["hi"], 9), id="array_content"),
+        pytest.param("*2\r\n+a\r\n+b\r\n", ParseResult(["a", "b"], 12), id="array_multiple_elements"),
+        pytest.param(
+            "*2\r\n$4\r\necho\r\n$11\r\nhello world\r\n",
+            ParseResult(["echo", "hello world"], 32),
+            id="array_bulk_strings",
+        ),
+        pytest.param("*2\r\n:1\r\n+a\r\n", ParseResult([1, "a"], 12), id="array_mixed_types"),
+        pytest.param(
+            "*3\r\n:1\r\n+a\r\n$11\r\nhello world\r\n",
+            ParseResult([1, "a", "hello world"], 30),
+            id="array_integer_simple_bulk",
+        ),
+        pytest.param(
+            "*2\r\n+first\r\n*2\r\n+nested1\r\n+nested2\r\n",
+            ParseResult(["first", ["nested1", "nested2"]], 36),
+            id="array_nested",
+        ),
+    ],
+)
+def test_valid_arrays(sent_message: str, expected_result: ParseResult) -> None:
+    parse_result = deserialise(sent_message)
+    assert parse_result == expected_result
+
+
+@pytest.mark.parametrize(
+    "sent_message",
+    [
+        pytest.param("*3\r\n+a\r\n+b\r\n", id="array_fewer_elements"),
+        pytest.param("*1\r\n+a\r\n+b\r\n", id="array_more_elements"),
+    ],
+)
+def test_invalid_arrays(sent_message: str) -> None:
+    with pytest.raises(InvalidMessageError):
+        deserialise(sent_message)

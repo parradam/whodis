@@ -1,14 +1,6 @@
 from dataclasses import dataclass
 
-# Defines carriage return/line feed, used as a terminator and a delimiter
-CRLF = "\r\n"
-
-
-class InvalidMessageError(ValueError):
-    pass
-
-
-RESPDataType = int | str | list["RESPDataType"]
+from src.whodis.shared import CRLF, InvalidMessageError, RESPDataType
 
 
 @dataclass(frozen=True)

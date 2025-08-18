@@ -1,6 +1,6 @@
 import pytest
 
-from src.whodis.serialise import SerialiseError, SerialiseResult, serialise
+from src.whodis.serialise import Kind, SerialiseError, SerialiseResult, serialise
 
 
 @pytest.mark.parametrize(
@@ -24,7 +24,7 @@ def test_invalid_protocol_messages(data: str) -> None:
     ],
 )
 def test_valid_simple_strings(data: str, expected_serialise_result: str) -> None:
-    serialise_result = serialise(data)
+    serialise_result = serialise(data, kind=Kind.PROTOCOL)
     assert serialise_result == expected_serialise_result
 
 @pytest.mark.parametrize(
@@ -35,5 +35,17 @@ def test_valid_simple_strings(data: str, expected_serialise_result: str) -> None
     ],
 )
 def test_valid_integers(data: str, expected_serialise_result: str) -> None:
+    serialise_result = serialise(data)
+    assert serialise_result == expected_serialise_result
+
+@pytest.mark.parametrize(
+    ("data", "expected_serialise_result"),
+    [
+        pytest.param("", SerialiseResult("$0\r\n\r\n", 6), id="bulk_empty"),
+        pytest.param("bulkstring", SerialiseResult("$10\r\nbulkstring\r\n", 17), id="bulk_content"),
+        pytest.param("bulk\r\nstring", SerialiseResult("$12\r\nbulk\r\nstring\r\n", 19), id="embedded_crlf"),
+    ],
+)
+def test_valid_bulk_strings(data: str, expected_serialise_result: str) -> None:
     serialise_result = serialise(data)
     assert serialise_result == expected_serialise_result

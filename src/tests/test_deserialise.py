@@ -76,7 +76,7 @@ def test_invalid_simple_strings(sent_message: str) -> None:
     ("sent_message", "expected_result"),
     [
         pytest.param(":123\r\n", ParseResult(123, 6), id="integer_content"),
-        pytest.param(f":{2**63!s}\r\n", ParseResult(2**63, len(str(2**63))+3), id="integer_large"),
+        pytest.param(f":{2**63!s}\r\n", ParseResult(2**63, len(str(2**63)) + 3), id="integer_large"),
     ],
 )
 def test_valid_integers(sent_message: str, expected_result: ParseResult) -> None:

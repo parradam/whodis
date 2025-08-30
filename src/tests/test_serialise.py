@@ -32,6 +32,21 @@ def test_valid_simple_strings(data: str, expected_serialise_result: str) -> None
 @pytest.mark.parametrize(
     ("data", "expected_serialise_result"),
     [
+        pytest.param("ERR", SerialiseResult("-ERR\r\n", 6), id="error_content"),
+        pytest.param("hello world ", SerialiseResult("-hello world \r\n", 15), id="error_trailing_space"),
+        pytest.param(" hello world", SerialiseResult("- hello world\r\n", 15), id="error_leading_space"),
+        pytest.param(" ", SerialiseResult("- \r\n", 4), id="error_one_space"),
+        pytest.param("   ", SerialiseResult("-   \r\n", 6), id="error_three_spaces"),
+    ],
+)
+def test_valid_errors(data: str, expected_serialise_result: str) -> None:
+    serialise_result = serialise(data, kind=Kind.ERROR)
+    assert serialise_result == expected_serialise_result
+
+
+@pytest.mark.parametrize(
+    ("data", "expected_serialise_result"),
+    [
         pytest.param(123, SerialiseResult(":123\r\n", 6), id="integer_content"),
         pytest.param(2**63, SerialiseResult(":9223372036854775808\r\n", 22), id="integer_large"),
     ],

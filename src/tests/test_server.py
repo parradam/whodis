@@ -1,20 +1,25 @@
 import socket
-import threading
-import time
 
-from src.whodis.server import HOST, PORT, run_server
+import pytest
+
+from src.whodis.server import WhodisServer
 
 
-def start_server() -> None:
-    run_server()
+@pytest.mark.parametrize(
+    "message",
+    [
+        pytest.param(b"+PING\r\n", id="server_simple_ping"),
+        pytest.param(b"$4\r\nPING\r\n", id="server_bulk_ping"),
+    ],
+)
+def test_ping_response(message: bytes) -> None:
+    server = WhodisServer(host="", port=0)
+    server.start()
 
-def test_ping_response() -> None:
-    server_thread = threading.Thread(target=start_server, daemon=True)
-    server_thread.start()
-    time.sleep(0.5)
-
-    with socket.create_connection((HOST, PORT)) as s:
-        s.sendall(b"+PING\r\n")
+    with socket.create_connection(("127.0.0.1", server.bound_port)) as s:
+        s.sendall(message)
         response = s.recv(1024)
+
+    server.stop()
 
     assert response == b"+PONG\r\n"

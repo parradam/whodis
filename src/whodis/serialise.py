@@ -24,13 +24,18 @@ def serialise(data: RESPDataType, kind: Kind = Kind.NON_PROTOCOL) -> SerialiseRe
     if isinstance(data, str):
         if kind == Kind.PROTOCOL:
             return _serialise_simple_string(data)
+
         if kind == Kind.NON_PROTOCOL:
             return _serialise_bulk_string(data)
+
         return _serialise_error(data)
+
     if isinstance(data, list):
         return _serialise_array(data, kind)
+
     if isinstance(data, int):  # pyright: ignore[reportUnnecessaryIsInstance]
         return _serialise_integer(data)
+
     error = f"Message could not be serialised: unsupported data {type(data)}"
     raise SerialiseError(error)
 
